@@ -113,3 +113,13 @@ class StorageError(Error):
   """Indicate an error occured during interaction with an abstracted storage
      backend."""
   pass
+
+
+class PayloadParseError(Error):
+  """Indicate an error during parsing of payload."""
+  pass
+
+
+class UnsupportedPayloadType(Error):
+  """If a payload parser does not support the given payload type."""
+  pass

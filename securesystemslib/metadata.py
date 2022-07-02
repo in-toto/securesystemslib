@@ -1,6 +1,8 @@
 """Dead Simple Signing Envelope
 """
 
+import abc
+import json
 from typing import Any, List
 
 from securesystemslib import exceptions, formats
@@ -97,3 +99,78 @@ class Envelope:
             len(self.payload),
             self.payload,
         )
+
+
+class Parser:
+    """A Generic Payload Parser.
+
+    Attributes:
+        _supported_payload_types: A list of supported payload types in lowercase.
+
+    Methods:
+        check_type(cls, payload_type: str):
+            Checks the parser support given payload type.
+
+        parse(envelope: Envelope):
+            Parse the envelope's payload.
+    """
+
+    __metaclass__ = abc.ABCMeta
+    _supported_payload_types: List[str] = []
+
+    @classmethod
+    def check_type(cls, payload_type: str) -> None:
+        """Checks the parser support given payload type.
+
+        Arguments:
+            payload_type: The payload_type to be checked.
+
+        Raises:
+            UnsupportedPayloadType: if payload_type is not a supported payload type.
+        """
+
+        if payload_type not in cls._supported_payload_types:
+            raise exceptions.UnsupportedPayloadType
+
+    @classmethod
+    @abc.abstractmethod
+    def parse(cls, envelope: Envelope) -> Any:
+        """Parse the envelope's payload.
+
+        Arguments:
+            envelope: The DSSE "Envelope" class instance.
+
+        Returns:
+            Returns the serialized body.
+        """
+        raise NotImplementedError  # pragma: no cover
+
+
+class SSlibParser(Parser):
+    """An example parser for securesystemslib.
+
+    This parser is created to test the capabilities of the Generic Parser class
+    and provide reference to implement a parser according to the application
+    and type of payload.
+    """
+
+    _supported_payload_types: List[str] = ["application/vnd.sslib+json"]
+
+    @classmethod
+    def parse(cls, envelope: Envelope) -> dict:
+        """Parse the envelope's payload into dict.
+
+        Arguments:
+            envelope: The DSSE "Envelope" class instance.
+
+        Returns:
+            Returns the parsed body.
+        """
+
+        cls.check_type(envelope.payload_type)
+        try:
+            return json.loads(envelope.payload)
+        except json.JSONDecodeError as exc:
+            raise exceptions.PayloadParseError(
+                "error during payload parsing, please check the payload"
+            ) from exc
