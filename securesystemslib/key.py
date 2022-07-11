@@ -1,7 +1,7 @@
 """Key interface and example interface implementations."""
 
 import abc
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from securesystemslib import keys
@@ -28,6 +28,7 @@ class Key:
         raise NotImplementedError  # pragma: no cover
 
 
+@dataclass
 class SSlibKey(Key):
     """A container class representing the public portion of a Key.
 
@@ -51,34 +52,11 @@ class SSlibKey(Key):
             by securesystemslib.
     """
 
-    def __init__(
-        self,
-        keyid: str,
-        keytype: str,
-        scheme: str,
-        keyval: Dict[str, str],
-        unrecognized_fields: Optional[Dict[str, Any]] = None,
-    ):
-        self.keyid = keyid
-        self.keytype = keytype
-        self.scheme = scheme
-        self.keyval = keyval
-        if unrecognized_fields is None:
-            unrecognized_fields = {}
-
-        self.unrecognized_fields = unrecognized_fields
-
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, SSlibKey):
-            return False
-
-        return (
-            self.keyid == other.keyid
-            and self.keytype == other.keytype
-            and self.scheme == other.scheme
-            and self.keyval == other.keyval
-            and self.unrecognized_fields == other.unrecognized_fields
-        )
+    keytype: str
+    scheme: str
+    keyval: Dict[str, str]
+    keyid: str
+    unrecognized_fields: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, key_dict: Dict[str, Any], keyid: str) -> "SSlibKey":
@@ -97,7 +75,7 @@ class SSlibKey(Key):
         keyval = key_dict.pop("keyval")
 
         # All fields left in the key_dict are unrecognized.
-        return cls(keyid, keytype, scheme, keyval, key_dict)
+        return cls(keytype, scheme, keyval, keyid, key_dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Returns the dictionary representation of self."""
@@ -128,10 +106,10 @@ class SSlibKey(Key):
         )
 
         return cls(
-            key_dict["keyid"],
             key_meta["keytype"],
             key_meta["scheme"],
             key_meta["keyval"],
+            key_dict["keyid"],
         )
 
     def to_securesystemslib_key(self) -> Dict[str, Any]:
