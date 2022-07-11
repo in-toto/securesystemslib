@@ -1,10 +1,12 @@
 """Key interface and example interface implementations."""
 
 import abc
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 from securesystemslib import keys
-from securesystemslib.signer import Signature
+from securesystemslib.gpg import functions as gpg
+from securesystemslib.signer import GPGSignature, Signature
 
 
 class Key:
@@ -156,3 +158,106 @@ class SSlibKey(Key):
         return keys.verify_signature(
             self.to_securesystemslib_key(), signature.to_dict(), payload
         )
+
+
+@dataclass
+class GPGKey(Key):
+    """A container class representing public key portion of a GPG key.
+
+    Provides a verify method to verify a cryptographic signature with a
+    gpg-style rsa, dsa or ecdsa public key on the instance.
+
+    Attributes:
+        type: Key type, e.g. "rsa", "dsa" or "ecdsa".
+        method: GPG Key Scheme, For example:
+            "pgp+rsa-pkcsv1.5", "pgp+dsa-fips-180-2", and "pgp+eddsa-ed25519".
+        hashes: list of GPG Hash Algorithms, e.g. "pgp+SHA2".
+        keyval: Opaque key content.
+        keyid: Key identifier that is unique within the metadata it is used in.
+            Keyid is not verified to be the hash of a specific representation
+            of the key.
+        creation_time: Unix timestamp when GPG key was created.
+        validity_period: Validity of the GPG Keys in days.
+        subkeys: A dictionary containing keyid and GPG subkey.
+    """
+
+    type: str
+    method: str
+    hashes: List[str]
+    keyval: Dict[str, str]
+    keyid: str
+    creation_time: Optional[int] = None
+    validity_period: Optional[int] = None
+    subkeys: Optional[Dict[str, "GPGKey"]] = None
+
+    @classmethod
+    def from_dict(cls, key_dict: Dict[str, Any]):
+        """Creates ``GPGKey`` object from its json/dict representation.
+
+        Raises:
+            KeyError, TypeError: Invalid arguments.
+
+        """
+        subkeys_dict = key_dict.get("subkeys")
+
+        gpg_subkeys = None
+        if subkeys_dict:
+            gpg_subkeys = {
+                keyid: GPGKey.from_dict(subkey_dict)
+                for (keyid, subkey_dict) in subkeys_dict.items()
+            }
+
+        return cls(
+            key_dict["type"],
+            key_dict["method"],
+            key_dict["hashes"],
+            key_dict["keyval"],
+            key_dict["keyid"],
+            key_dict.get("creation_time"),
+            key_dict.get("validity_period"),
+            gpg_subkeys,
+        )
+
+    def to_dict(self):
+        """Returns the dictionary representation of self."""
+
+        key_dict = {
+            "method": self.method,
+            "type": self.type,
+            "hashes": self.hashes,
+            "keyid": self.keyid,
+            "keyval": self.keyval,
+        }
+
+        if self.creation_time:
+            key_dict["creation_time"] = self.creation_time
+        if self.validity_period:
+            key_dict["validity_period"] = self.validity_period
+        if self.subkeys:
+            subkeys_dict = {
+                keyid: subkey.to_dict()
+                for (keyid, subkey) in self.subkeys.items()
+            }
+            key_dict["subkeys"] = subkeys_dict
+
+        return key_dict
+
+    @classmethod
+    def from_keyring(cls, keyid, homedir=None):
+        """Creates ``GPGKey`` object from GnuPG Keyring."""
+
+        pubkey_dict = gpg.export_pubkey(keyid, homedir)
+        return cls.from_dict(pubkey_dict)
+
+    def verify(self, signature: GPGSignature, payload: bytes) -> bool:
+        """Verifies a given payload by the key assigned to the GPGKey instance.
+
+        Arguments:
+            signature: A "GPGSignature" class instance.
+            payload: The bytes to be verified.
+
+        Returns:
+            Boolean. True if the signature is valid, False otherwise.
+        """
+
+        return gpg.verify_signature(signature.to_dict(), self.to_dict(), payload)
