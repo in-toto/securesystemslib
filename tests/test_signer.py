@@ -11,9 +11,10 @@ import shutil
 import securesystemslib.formats
 import securesystemslib.keys as KEYS
 from securesystemslib.exceptions import FormatError, UnsupportedAlgorithmError
+from securesystemslib.key import GPGKey
 from securesystemslib.signer import GPGSignature, Signature, SSlibSigner, GPGSigner
 from securesystemslib.gpg.constants import HAVE_GPG
-from securesystemslib.gpg.functions import export_pubkey, verify_signature as verify_sig
+from securesystemslib.gpg.functions import export_pubkey
 
 
 class TestSSlibSigner(unittest.TestCase):
@@ -119,6 +120,8 @@ class TestGPGRSA(unittest.TestCase):
         shutil.copytree(gpg_keyring_path, cls.gnupg_home)
         os.chdir(cls.test_dir)
 
+        cls.default_key_dict = export_pubkey(cls.default_keyid, cls.gnupg_home)
+
     @classmethod
     def tearDownClass(cls):
         """Change back to initial working dir and remove temp test directory."""
@@ -127,30 +130,45 @@ class TestGPGRSA(unittest.TestCase):
         shutil.rmtree(cls.test_dir)
 
     def test_gpg_sign_and_verify_object_with_default_key(self):
-        """Create a signature using the default key on the keyring."""
+        """Create and verify a signature using the default key on the keyring."""
 
+        # Create a signature.
         signer = GPGSigner(homedir=self.gnupg_home)
         signature = signer.sign(self.test_data)
 
-        signature_dict = signature.to_dict()
-        key_data = export_pubkey(self.default_keyid, self.gnupg_home)
+        # Generate Key from gnupg keyring.
+        key = GPGKey.from_keyring(self.default_keyid, self.gnupg_home)
 
-        self.assertTrue(verify_sig(signature_dict, key_data, self.test_data))
-        self.assertFalse(verify_sig(signature_dict, key_data, self.wrong_data))
+        self.assertTrue(key.verify(signature, self.test_data))
+        self.assertFalse(key.verify(signature, self.wrong_data))
+
+        # Generate Key from dict.
+        key = GPGKey.from_dict(self.default_key_dict)
+
+        self.assertTrue(key.verify(signature, self.test_data))
+        self.assertFalse(key.verify(signature, self.wrong_data))
 
     def test_gpg_sign_and_verify_object(self):
-        """Create a signature using a specific key on the keyring."""
+        """Create and verify a signature using the specific key on the keyring."""
 
+        # Create a signature.
         signer = GPGSigner(self.signing_subkey_keyid, self.gnupg_home)
         signature = signer.sign(self.test_data)
 
-        signature_dict = signature.to_dict()
-        key_data = export_pubkey(self.signing_subkey_keyid, self.gnupg_home)
+        # Generate Key from gnupg keyring.
+        key = GPGKey.from_keyring(self.signing_subkey_keyid, self.gnupg_home)
 
-        self.assertTrue(verify_sig(signature_dict, key_data, self.test_data))
-        self.assertFalse(verify_sig(signature_dict, key_data, self.wrong_data))
+        self.assertTrue(key.verify(signature, self.test_data))
+        self.assertFalse(key.verify(signature, self.wrong_data))
 
-    def test_gpg_serialization(self):
+        # Generate Key from dict.
+        key_dict = export_pubkey(self.signing_subkey_keyid, self.gnupg_home)
+        key = GPGKey.from_dict(key_dict)
+
+        self.assertTrue(key.verify(signature, self.test_data))
+        self.assertFalse(key.verify(signature, self.wrong_data))
+
+    def test_gpg_signer_serialization(self):
         """Tests from_dict and to_dict methods of GPGSignature."""
 
         sig_dict = {
@@ -161,6 +179,46 @@ class TestGPGRSA(unittest.TestCase):
 
         signature = GPGSignature.from_dict(sig_dict)
         self.assertEqual(sig_dict, signature.to_dict())
+
+    def test_gpg_key_serialization(self):
+        """Test to check serialization methods of GPGKey."""
+
+        # Test loading and dumping of GPGKey.
+        key = GPGKey.from_dict(self.default_key_dict)
+        self.assertEqual(key.to_dict(), self.default_key_dict)
+
+        # Test loading and dumping of GPGKey from keyring.
+        key = GPGKey.from_keyring(self.default_keyid, self.gnupg_home)
+        self.assertEqual(key.to_dict(), self.default_key_dict)
+
+    def test_gpg_key_equality(self):
+        """Test to check equality between two GPGKey."""
+
+        # Generate two GPGkey.
+        key1 = GPGKey.from_dict(self.default_key_dict)
+        key2 = GPGKey.from_dict(self.default_key_dict)
+
+        self.assertNotEqual(self.default_key_dict, key1)
+        self.assertEqual(key2, key1)
+
+        # Assert equality of key created from dict of first GPGKey.
+        key2 = GPGKey.from_dict(key1.to_dict())
+        self.assertEqual(key2, key1)
+
+        # Assert Inequalities.
+        key2.type = "invalid"
+        self.assertNotEqual(key2, key1)
+        key2.type = key1.type
+
+        key2.subkeys = {}
+        self.assertNotEqual(key2, key1)
+        key2.subkeys = key1.subkeys
+
+        key2.keyval = {}
+        self.assertNotEqual(key2, key1)
+        key2.keyval = key1.keyval
+
+        self.assertEqual(key2, key1)
 
 
 # Run the unit tests.
