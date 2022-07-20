@@ -4,7 +4,7 @@
 from typing import Any, List
 
 from securesystemslib import exceptions, formats
-from securesystemslib.signer import Signature
+from securesystemslib.signer import GPGSignature, Signature
 from securesystemslib.util import b64dec, b64enc
 
 
@@ -55,7 +55,6 @@ class Envelope:
         Raises:
             KeyError: If any of the "payload", "payloadType" and "signatures"
                 fields are missing from the "data".
-
             FormatError: If signature in "signatures" is incorrect.
 
         Returns:
@@ -68,13 +67,11 @@ class Envelope:
         signatures = []
         for signature in data["signatures"]:
             if formats.GPG_SIGNATURE_SCHEMA.matches(signature):
-                raise NotImplementedError
-
-            if formats.SIGNATURE_SCHEMA.matches(signature):
+                signatures.append(GPGSignature.from_dict(signature))
+            elif formats.SIGNATURE_SCHEMA.matches(signature):
                 signatures.append(Signature.from_dict(signature))
-
             else:
-                raise exceptions.FormatError("Wanted a 'Signature'.")
+                raise exceptions.FormatError("Wanted a 'Signature'")
 
         return cls(payload, payload_type, signatures)
 
