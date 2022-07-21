@@ -13,6 +13,20 @@ class Key:
     """Key interface created to support multiple verify implementations."""
 
     __metaclass__ = abc.ABCMeta
+    keyid: str
+
+    @abc.abstractmethod
+    def match_keyid(self, keyid: str) -> bool:
+        """Matches a keyid with the keyid present in the Key instance.
+
+        Arguments:
+            keyid: Key identifier
+
+        Returns:
+            Boolean. True if keyid matches for the Key, False otherwise.
+        """
+
+        raise NotImplementedError
 
     @abc.abstractmethod
     def verify(self, signature: Signature, payload: bytes) -> bool:
@@ -54,7 +68,7 @@ class SSlibKey(Key):
 
     keytype: str
     scheme: str
-    keyval: Dict[str, str]
+    keyval: Dict[str, Dict]
     keyid: str
     unrecognized_fields: Dict[str, Any] = field(default_factory=dict)
 
@@ -121,6 +135,18 @@ class SSlibKey(Key):
             "scheme": self.scheme,
             "keyval": self.keyval,
         }
+
+    def match_keyid(self, keyid: str) -> bool:
+        """Matches a keyid with the keyid present in the Key instance.
+
+        Arguments:
+            keyid: Key identifier
+
+        Returns:
+            Boolean. True if keyid matches for the Key, False otherwise.
+        """
+
+        return self.keyid == keyid
 
     def verify(self, signature: Signature, payload: bytes) -> bool:
         """Verifies a given payload by the key assigned to the SSlibKey instance.
@@ -226,6 +252,22 @@ class GPGKey(Key):
 
         pubkey_dict = gpg.export_pubkey(keyid, homedir)
         return cls.from_dict(pubkey_dict)
+
+    def match_keyid(self, keyid: str) -> bool:
+        """Matches a keyid with the keyids present in the Key instance.
+
+        Arguments:
+            keyid: Key identifier
+
+        Returns:
+            Boolean. True if keyid matches for the Key, False otherwise.
+        """
+
+        if self.keyid == keyid:
+            return True
+        if self.subkeys and keyid in self.subkeys:
+            return True
+        return False
 
     def verify(self, signature: GPGSignature, payload: bytes) -> bool:
         """Verifies a given payload by the key assigned to the GPGKey instance.
