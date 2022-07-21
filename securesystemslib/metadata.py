@@ -1,36 +1,32 @@
 """Dead Simple Signing Envelope
 """
 
+import logging
 from typing import Any, List
 
 from securesystemslib import exceptions, formats
 from securesystemslib.signer import GPGSignature, Signature
 from securesystemslib.util import b64dec, b64enc
 
+logger = logging.getLogger(__name__)
+
 
 class Envelope:
-    """
-    DSSE Envelope to provide interface for signing arbitrary data.
+    """DSSE Envelope to provide interface for signing arbitrary data.
 
     Attributes:
-        payload: Arbitrary byte sequence of serialized body
-        payload_type: string that identifies how to interpret payload
-        signatures: List of Signature and GPG Signature
-
-    Methods:
-        from_dict(cls, data):
-            Creates a Signature object from its JSON/dict representation.
-
-        to_dict(self):
-            Returns the JSON-serializable dictionary representation of self.
+        payload: Arbitrary byte sequence of serialized body.
+        payload_type: string that identifies how to interpret payload.
+        signatures: list of Signature and GPGSignature.
 
     """
 
-    payload: bytes
-    payload_type: str
-    signatures: List[Signature]
-
-    def __init__(self, payload, payload_type, signatures):
+    def __init__(
+        self,
+        payload: bytes,
+        payload_type: str,
+        signatures: List[Signature]
+    ):
         self.payload = payload
         self.payload_type = payload_type
         self.signatures = signatures
@@ -84,7 +80,6 @@ class Envelope:
             "signatures": [signature.to_dict() for signature in self.signatures],
         }
 
-    @property
     def pae(self) -> bytes:
         """Pre-Auth-Encoding byte sequence of self."""
 
