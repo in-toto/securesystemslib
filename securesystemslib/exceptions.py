@@ -109,7 +109,13 @@ class InvalidConfigurationError(Error):
   """If a configuration object does not match the expected format."""
   pass
 
+
 class StorageError(Error):
-  """Indicate an error occured during interaction with an abstracted storage
+  """Indicate an error occurred during interaction with an abstracted storage
      backend."""
+  pass
+
+
+class SignatureVerificationError(Error):
+  """Indicate an error occurred during signature verification of DSSE."""
   pass

@@ -2,10 +2,11 @@
 """
 
 import logging
-from typing import Any, List
+from typing import Any, Dict, List
 
 from securesystemslib import exceptions, formats
-from securesystemslib.signer import GPGSignature, Signature
+from securesystemslib.key import Key
+from securesystemslib.signer import GPGSignature, Signature, Signer
 from securesystemslib.util import b64dec, b64enc
 
 logger = logging.getLogger(__name__)
@@ -89,3 +90,74 @@ class Envelope:
             len(self.payload),
             self.payload,
         )
+
+    def sign(self, signer: Signer) -> Signature:
+        """Sign the payload and create the signature.
+
+        Arguments:
+            signer: A "Signer" class instance.
+
+        Returns:
+            A "Signature" instance.
+        """
+
+        signature = signer.sign(self.pae())
+        self.signatures.append(signature)
+
+        return signature
+
+    def verify(self, keys: List[Key], threshold: int) -> Dict[str, Key]:
+        """Verify the payload with the provided Keys.
+
+        Arguments:
+            keys: A list of public keys to verify the signatures.
+            threshold: Number of signatures needed to pass the verification.
+
+        Raises:
+            ValueError: If "threshold" is not valid.
+            SignatureVerificationError: If the enclosed signatures do not pass
+                the verification.
+
+        Note:
+            Mandating keyid in signatures and matching them with keyid of Key
+            in order to consider them for verification, is not a DSSE spec
+            compliant (Issue #416).
+
+        Returns:
+            accepted_keys: A dict of unique public keys.
+        """
+
+        accepted_keys = {}
+        pae = self.pae()
+
+        # checks for threshold value.
+        if threshold <= 0:
+            raise ValueError("Threshold must be greater than 0")
+
+        if len(keys) < threshold:
+            raise ValueError("Number of keys can't be less than threshold")
+
+        for signature in self.signatures:
+            for key in keys:
+                # If Signature keyid doesn't match with Key, skip.
+                if not key.match_keyid(signature.keyid):
+                    continue
+
+                # If a key verifies the signature, we exit and use the result.
+                # TODO: Exception handling in `Key.verify`.
+                # See https://github.com/in-toto/securesystemslib/issues/8.
+                if key.verify(signature, pae):
+                    accepted_keys[key.keyid] = key
+                    break
+
+            # Break, if amount of recognized_signer are more than threshold.
+            if len(accepted_keys) >= threshold:
+                break
+
+        if threshold > len(accepted_keys):
+            raise exceptions.SignatureVerificationError(
+                "Accepted signatures do not match threshold,"
+                f" Found: {len(accepted_keys)}, Expected {threshold}"
+            )
+
+        return accepted_keys
