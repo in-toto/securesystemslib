@@ -120,7 +120,7 @@ class Envelope:
 
         Note:
             Mandating keyid in signatures and matching them with keyid of Key
-            in order to consider them for verification, is not a DSSE spec
+            in order to consider them for verification, is not DSSE spec
             compliant (Issue #416).
 
         Returns:
