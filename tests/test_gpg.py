@@ -25,6 +25,8 @@ import shutil
 import tempfile
 import unittest
 
+from typing import List
+
 if sys.version_info >= (3, 3):
   from unittest.mock import patch # pylint: disable=no-name-in-module,import-error
 else:
@@ -55,8 +57,12 @@ from securesystemslib.gpg.constants import (SHA1, SHA256, SHA512,
 from securesystemslib.gpg.exceptions import (PacketParsingError,
     PacketVersionNotSupportedError, SignatureAlgorithmNotSupportedError,
     KeyNotFoundError, CommandError, KeyExpirationError)
+from securesystemslib.exceptions import SignatureVerificationError
 from securesystemslib.formats import (GPG_PUBKEY_SCHEMA,
     ANY_PUBKEY_DICT_SCHEMA)
+from securesystemslib.key import GPGKey, Key
+from securesystemslib.metadata import Envelope
+from securesystemslib.signer import GPGSignature, GPGSigner
 
 
 class GPGTestUtils:
@@ -649,6 +655,31 @@ class TestGPGRSA(unittest.TestCase):
         "\nexpected: {}"
         "\ngot:      {}".format(expected, ctx.exception))
 
+  def test_dsse_envelope(self):
+    """Test signing and verifying DSSE signatures."""
+
+    # Create the DSSE Envelope.
+    envelope = Envelope(
+      payload=b"hello world",
+      payload_type="http://example.com/HelloWorld",
+      signatures=[],
+    )
+
+    # Create a GPGSigner and create a DSSE signature.
+    gpg_signer = GPGSigner(homedir=self.gnupg_home)
+    gpg_signature = envelope.sign(gpg_signer)
+    self.assertIsInstance(gpg_signature, GPGSignature)
+    
+    # Create a GPGKey and verify the DSSE signature.
+    gpgkey = GPGKey.from_keyring(keyid=self.default_keyid, homedir=self.gnupg_home)
+    key_list: List[Key] = [gpgkey]
+    envelope.verify(key_list, 1)
+
+    # Duplicate GPGKey.
+    new_key_list = key_list + key_list
+    with self.assertRaises(SignatureVerificationError):
+      envelope.verify(new_key_list, 2)
+
 
 @unittest.skipIf(not HAVE_GPG, "gpg not found")
 class TestGPGDSA(unittest.TestCase):
@@ -733,6 +764,26 @@ class TestGPGDSA(unittest.TestCase):
     self.assertTrue(verify_signature(signature, key_data, test_data))
     self.assertFalse(verify_signature(signature, key_data, wrong_data))
 
+  def test_dsse_envelope(self):
+    """Test signing and verifying DSSE signatures."""
+
+    # Create the DSSE Envelope.
+    envelope = Envelope(
+      payload=b"hello world",
+      payload_type="http://example.com/HelloWorld",
+      signatures=[],
+    )
+
+    # Create a GPGSigner and create a DSSE signature.
+    gpg_signer = GPGSigner(homedir=self.gnupg_home)
+    gpg_signature = envelope.sign(gpg_signer)
+    self.assertIsInstance(gpg_signature, GPGSignature)
+    
+    # Create a GPGKey and verify the DSSE signature.
+    gpgkey = GPGKey.from_keyring(keyid=self.default_keyid, homedir=self.gnupg_home)
+    key_list: List[Key] = [gpgkey]
+    envelope.verify(key_list, 1)
+
 
 
 @unittest.skipIf(not HAVE_GPG, "gpg not found")
@@ -807,6 +858,26 @@ class TestGPGEdDSA(unittest.TestCase):
     # Check that the signature can be successfully verified
     key = export_pubkey(self.default_keyid, homedir=self.gnupg_home)
     self.assertTrue(verify_signature(signature, key, test_data))
+
+  def test_dsse_envelope(self):
+    """Test signing and verifying DSSE signatures."""
+
+    # Create the DSSE Envelope.
+    envelope = Envelope(
+      payload=b"hello world",
+      payload_type="http://example.com/HelloWorld",
+      signatures=[],
+    )
+
+    # Create a GPGSigner and create a DSSE signature.
+    gpg_signer = GPGSigner(homedir=self.gnupg_home)
+    gpg_signature = envelope.sign(gpg_signer)
+    self.assertIsInstance(gpg_signature, GPGSignature)
+    
+    # Create a GPGKey and verify the DSSE signature.
+    gpgkey = GPGKey.from_keyring(keyid=self.default_keyid, homedir=self.gnupg_home)
+    key_list: List[Key] = [gpgkey]
+    envelope.verify(key_list, 1)
 
 
 if __name__ == "__main__":
