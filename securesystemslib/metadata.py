@@ -2,17 +2,22 @@
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from securesystemslib import exceptions, formats
 from securesystemslib.key import Key
+from securesystemslib.serialization import (
+    BaseDeserializer,
+    JSONDeserializer,
+    Serializable,
+)
 from securesystemslib.signer import GPGSignature, Signature, Signer
 from securesystemslib.util import b64dec, b64enc
 
 logger = logging.getLogger(__name__)
 
 
-class Envelope:
+class Envelope(Serializable):
     """DSSE Envelope to provide interface for signing arbitrary data.
 
     Attributes:
@@ -161,3 +166,28 @@ class Envelope:
             )
 
         return accepted_keys
+
+    def deserialize_payload(
+        self,
+        class_type: Any,
+        deserializer: Optional[BaseDeserializer] = None,
+    ) -> Any:
+        """Parse DSSE payload.
+
+        Arguments:
+            class_type: A class having a from_dict method.
+            deserializer: ``BaseDeserializer`` implementation to use.
+                Default is JSONDeserializer.
+
+        Raises:
+            DeserializationError: The payload cannot be deserialized.
+
+        Returns:
+            The deserialized object of payload.
+        """
+
+        if deserializer is None:
+            deserializer = JSONDeserializer()
+
+        payload = deserializer.deserialize(self.payload, class_type)
+        return payload
