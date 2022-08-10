@@ -4,12 +4,15 @@ implementations to serialize and deserialize objects.
 
 import abc
 import json
-from typing import Any
+import tempfile
+from typing import Any, Optional
 
 from securesystemslib.exceptions import (
     DeserializationError,
     SerializationError,
 )
+from securesystemslib.storage import FilesystemBackend, StorageBackendInterface
+from securesystemslib.util import persist_temp_file
 
 
 class BaseDeserializer(metaclass=abc.ABCMeta):
@@ -91,3 +94,115 @@ class JSONSerializer(BaseSerializer):
             raise SerializationError("Failed to serialize JSON") from e
 
         return json_bytes
+
+
+class Serializable(metaclass=abc.ABCMeta):
+    """Objects with Base class Serializable are to be serialized and
+    deserialized using `to_bytes`, `from_bytes`, `to_file` and `from_file`
+    methods.
+    """
+
+    @classmethod
+    def from_bytes(
+        cls,
+        data: bytes,
+        deserializer: Optional[BaseDeserializer] = None,
+    ) -> "Serializable":
+        """Loads the Serializable from raw data.
+        Args:
+            data: bytes content.
+            deserializer: ``BaseDeserializer`` implementation to use.
+                Default is JSONDeserializer.
+        Raises:
+            DeserializationError: The file cannot be deserialized.
+        Returns:
+            The Serializable object.
+        """
+
+        if deserializer is None:
+            deserializer = JSONDeserializer()
+
+        return deserializer.deserialize(data, cls)
+
+    @classmethod
+    def from_file(
+        cls,
+        filename: str,
+        deserializer: Optional[BaseDeserializer] = None,
+        storage_backend: Optional[StorageBackendInterface] = None,
+    ) -> "Serializable":
+        """Loads object from file storage.
+
+        Arguments:
+            filename: Path to read the file from.
+            deserializer: ``BaseDeserializer`` subclass instance that
+                implements the desired wireline format deserialization.
+            storage_backend: Object that implements
+                ``securesystemslib.storage.StorageBackendInterface``.
+                Default is ``FilesystemBackend`` (i.e. a local file).
+        Raises:
+            StorageError: The file cannot be read.
+            DeserializationError: The file cannot be deserialized.
+        Returns:
+            The Serializable object.
+        """
+
+        if storage_backend is None:
+            storage_backend = FilesystemBackend()
+
+        with storage_backend.get(filename) as file_obj:
+            return cls.from_bytes(file_obj.read(), deserializer)
+
+    def to_bytes(self, serializer: Optional[BaseSerializer] = None) -> bytes:
+        """Return the serialized file format as bytes.
+
+        Note that if bytes are first deserialized and then serialized with
+        ``to_file()``, the two files are not required to be identical (in case
+        of Metadata the signatures are guaranteed to stay valid). If
+        byte-for-byte equivalence is required (which is the case when content
+        hashes are used in other metadata), the original content should be used
+        instead of re-serializing.
+
+        Arguments:
+            serializer: ``BaseSerializer`` instance that implements the
+                desired serialization format. Default is ``JSONSerializer``.
+        Raises:
+            SerializationError: The Serializable object cannot be serialized.
+        """
+
+        if serializer is None:
+            serializer = JSONSerializer()
+
+        return serializer.serialize(self)
+
+    def to_file(
+        self,
+        filename: str,
+        serializer: Optional[BaseSerializer] = None,
+        storage_backend: Optional[StorageBackendInterface] = None,
+    ) -> None:
+        """Writes object to file storage.
+
+        Note that if a file is first deserialized and then serialized with
+        ``to_file()``, the two files are not required to be identical (in case
+        of Metadata the signatures are guaranteed to stay valid). If
+        byte-for-byte equivalence is required (which is the case when file
+        hashes are used in other metadata), the original file should be used
+        instead of re-serializing.
+
+        Arguments:
+            filename: Path to write the file to.
+            serializer: ``BaseSerializer`` instance that implements the
+                desired serialization format. Default is ``JSONSerializer``.
+            storage_backend: ``StorageBackendInterface`` implementation.
+                Default  is ``FilesystemBackend`` (i.e. a local file).
+        Raises:
+            SerializationError: The Serializable object cannot be serialized.
+            StorageError: The file cannot be written.
+        """
+
+        bytes_data = self.to_bytes(serializer)
+
+        with tempfile.TemporaryFile() as temp_file:
+            temp_file.write(bytes_data)
+            persist_temp_file(temp_file, filename, storage_backend)
