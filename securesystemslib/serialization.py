@@ -21,7 +21,8 @@ class BaseDeserializer(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def deserialize(self, raw_data: bytes, cls: Any) -> Any:
         """Deserialize bytes to a specific object."""
-        raise NotImplementedError
+
+        raise NotImplementedError  # pragma: no cover
 
 
 class JSONDeserializer(BaseDeserializer):
@@ -54,7 +55,8 @@ class BaseSerializer(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def serialize(self, obj: Any) -> bytes:
         """Serialize an object to bytes."""
-        raise NotImplementedError
+
+        raise NotImplementedError  # pragma: no cover
 
 
 class JSONSerializer(BaseSerializer):
