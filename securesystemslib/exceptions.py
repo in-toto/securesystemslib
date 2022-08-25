@@ -119,3 +119,13 @@ class StorageError(Error):
 class SignatureVerificationError(Error):
   """Indicate an error occurred during signature verification of DSSE."""
   pass
+
+
+class SerializationError(Error):
+  """Error during serialization."""
+  pass
+
+
+class DeserializationError(Error):
+  """Error during deserialization."""
+  pass
