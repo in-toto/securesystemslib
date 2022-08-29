@@ -197,3 +197,28 @@ class Envelope(SerializationMixin, JSONSerializable):
 
         payload = deserializer.deserialize(self.payload, class_type)
         return payload
+
+    def match_payload(
+        self,
+        class_type: Any,
+        deserializer: Optional[BaseDeserializer] = None,
+    ) -> bool:
+        """Checks for the payload if deserializes into the provided class type.
+
+        Arguments:
+            class_type: The class to be deserialized. If the default
+                deserializer is used, it must implement ``JSONSerializable``.
+            deserializer: ``BaseDeserializer`` implementation to use.
+                Default is JSONDeserializer.
+
+        Returns:
+            Boolean. Indicating the provided class type is matched with
+            payload.
+        """
+
+        try:
+            self.deserialize_payload(class_type, deserializer)
+        except exceptions.DeserializationError:
+            return False
+        else:
+            return True
