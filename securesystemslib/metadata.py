@@ -53,6 +53,16 @@ class Envelope(SerializationMixin, JSONSerializable):
         return JSONSerializer()
 
     @classmethod
+    def from_bytes(
+        cls,
+        data: bytes,
+        deserializer: Optional[BaseDeserializer] = None
+    ) -> "Envelope":
+
+        json = super().from_bytes(data, deserializer)
+        return cls.from_dict(json)
+
+    @classmethod
     def from_dict(cls, data: dict) -> "Envelope":
         """Creates a DSSE Envelope from its JSON/dict representation.
 
@@ -172,18 +182,14 @@ class Envelope(SerializationMixin, JSONSerializable):
 
         return accepted_keys
 
-    def deserialize_payload(
+    def get_payload(
         self,
-        class_type: Any,
-        deserializer: Optional[BaseDeserializer] = None,
+        deserializer: BaseDeserializer,
     ) -> Any:
         """Parse DSSE payload.
 
         Arguments:
-            class_type: The class to be deserialized. If the default
-                deserializer is used, it must implement ``JSONSerializable``.
             deserializer: ``BaseDeserializer`` implementation to use.
-                Default is JSONDeserializer.
 
         Raises:
             DeserializationError: The payload cannot be deserialized.
@@ -192,8 +198,4 @@ class Envelope(SerializationMixin, JSONSerializable):
             The deserialized object of payload.
         """
 
-        if deserializer is None:
-            deserializer = JSONDeserializer()
-
-        payload = deserializer.deserialize(self.payload, class_type)
-        return payload
+        return deserializer.deserialize(self.payload)

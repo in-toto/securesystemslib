@@ -21,7 +21,7 @@ class BaseDeserializer(metaclass=abc.ABCMeta):
     """Abstract base class for deserialization of objects."""
 
     @abc.abstractmethod
-    def deserialize(self, raw_data: bytes, cls: Any) -> Any:
+    def deserialize(self, raw_data: bytes) -> Any:
         """Deserialize bytes to a specific object."""
 
         raise NotImplementedError  # pragma: no cover
@@ -30,25 +30,21 @@ class BaseDeserializer(metaclass=abc.ABCMeta):
 class JSONDeserializer(BaseDeserializer):
     """Provides raw to JSON deserialize method."""
 
-    def deserialize(self, raw_data: bytes, cls: "JSONSerializable") -> Any:
-        """Deserialize utf-8 encoded JSON bytes into an instance of cls.
+    def deserialize(self, raw_data: bytes) -> Any:
+        """Deserialize utf-8 encoded JSON bytes into a dict.
 
         Arguments:
             raw_data: A utf-8 encoded bytes string.
-            cls: A "JSONSerializable" subclass.
 
         Returns:
             Object of the provided class type.
         """
 
         try:
-            json_dict = json.loads(raw_data.decode("utf-8"))
-            obj = cls.from_dict(json_dict)
+            return json.loads(raw_data.decode("utf-8"))
 
         except Exception as e:
             raise DeserializationError("Failed to deserialize bytes") from e
-
-        return obj
 
 
 class BaseSerializer(metaclass=abc.ABCMeta):
@@ -141,7 +137,7 @@ class SerializationMixin(metaclass=abc.ABCMeta):
         if deserializer is None:
             deserializer = cls.default_deserializer()
 
-        return deserializer.deserialize(data, cls)
+        return deserializer.deserialize(data)
 
     @classmethod
     def from_file(
@@ -229,19 +225,9 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
 class JSONSerializable(metaclass=abc.ABCMeta):
     """Abstract base class that provide method to convert an instance of class
-    to dict and back to an object from its JSON/dict representation.
-
-    It provides `from_dict` and `to_dict` method, therefore, JSONSerializer and
-    JSONDeserializer requires a subclass of this class for serialization and
-    deserialization.
+    to dict. It provides `to_dict` method, therefore, JSONSerializer requires
+    a subclass of this class for serialization.
     """
-
-    @classmethod
-    @abc.abstractmethod
-    def from_dict(cls, data: dict) -> Any:
-        """Creates an object from its JSON/dict representation."""
-
-        raise NotImplementedError  # pragma: no cover
 
     @abc.abstractmethod
     def to_dict(self) -> dict:
