@@ -2,7 +2,7 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from securesystemslib import exceptions, formats
 from securesystemslib.key import Key
@@ -12,6 +12,31 @@ from securesystemslib.signer import GPGSignature, Signature, Signer
 from securesystemslib.util import b64dec, b64enc
 
 logger = logging.getLogger(__name__)
+
+
+class EnvelopeJSONDeserializer(JSONDeserializer):
+    """Deserializes raw bytes and creates an Envelope object using JSON
+    Deserialization."""
+
+    def deserialize(self, raw_data: bytes) -> "Envelope":
+        """Deserialize utf-8 encoded JSON bytes into an instance of Envelope.
+
+        Arguments:
+            raw_data: A utf-8 encoded bytes string.
+
+        Raises:
+            DeserializationError: If fails to deserialize raw_data.
+
+        Returns:
+            dict.
+        """
+        try:
+            return Envelope.from_dict(
+                super().deserialize(raw_data)
+            )
+        except Exception as e:
+            raise exceptions.DeserializationError(
+                "Failed to create Envelope") from e
 
 
 class Envelope(SerializationMixin, JSONSerializable):
@@ -46,21 +71,11 @@ class Envelope(SerializationMixin, JSONSerializable):
 
     @staticmethod
     def default_deserializer() -> BaseDeserializer:
-        return JSONDeserializer()
+        return EnvelopeJSONDeserializer()
 
     @staticmethod
     def default_serializer() -> BaseSerializer:
         return JSONSerializer()
-
-    @classmethod
-    def from_bytes(
-        cls,
-        data: bytes,
-        deserializer: Optional[BaseDeserializer] = None
-    ) -> "Envelope":
-
-        json = super().from_bytes(data, deserializer)
-        return cls.from_dict(json)
 
     @classmethod
     def from_dict(cls, data: dict) -> "Envelope":

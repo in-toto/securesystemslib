@@ -5,7 +5,7 @@ implementations to serialize and deserialize objects.
 import abc
 import json
 import tempfile
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from securesystemslib.exceptions import (
     DeserializationError,
@@ -22,7 +22,7 @@ class BaseDeserializer(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def deserialize(self, raw_data: bytes) -> Any:
-        """Deserialize bytes to a specific object."""
+        """Deserialize bytes."""
 
         raise NotImplementedError  # pragma: no cover
 
@@ -30,14 +30,17 @@ class BaseDeserializer(metaclass=abc.ABCMeta):
 class JSONDeserializer(BaseDeserializer):
     """Provides raw to JSON deserialize method."""
 
-    def deserialize(self, raw_data: bytes) -> Any:
+    def deserialize(self, raw_data: bytes) -> Dict:
         """Deserialize utf-8 encoded JSON bytes into a dict.
 
         Arguments:
             raw_data: A utf-8 encoded bytes string.
 
+        Raises:
+            DeserializationError: If fails to decode raw_data into json.
+
         Returns:
-            Object of the provided class type.
+            dict.
         """
 
         try:
@@ -224,9 +227,8 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
 
 class JSONSerializable(metaclass=abc.ABCMeta):
-    """Abstract base class that provide method to convert an instance of class
-    to dict. It provides `to_dict` method, therefore, JSONSerializer requires
-    a subclass of this class for serialization.
+    """Objects serialized with ``JSONSerializer`` must inherit from this class
+    and implement its ``to_dict`` method..
     """
 
     @abc.abstractmethod
