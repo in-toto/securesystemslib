@@ -111,7 +111,7 @@ class Envelope(SerializationMixin, JSONSerializable):
             self.payload,
         )
 
-    def sign(self, signer: Signer) -> Signature:
+    def create_sig(self, signer: Signer) -> Signature:
         """Sign the payload and create the signature.
 
         Arguments:
@@ -126,7 +126,7 @@ class Envelope(SerializationMixin, JSONSerializable):
 
         return signature
 
-    def verify(self, keys: List[Key], threshold: int) -> Dict[str, Key]:
+    def verify_sigs(self, keys: List[Key], threshold: int) -> Dict[str, Key]:
         """Verify the payload with the provided Keys.
 
         Arguments:
