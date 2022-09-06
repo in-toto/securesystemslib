@@ -228,7 +228,7 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
 class JSONSerializable(metaclass=abc.ABCMeta):
     """Objects serialized with ``JSONSerializer`` must inherit from this class
-    and implement its ``to_dict`` method..
+    and implement its ``to_dict`` method.
     """
 
     @abc.abstractmethod
