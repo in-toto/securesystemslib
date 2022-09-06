@@ -117,12 +117,12 @@ class TestEnvelope(unittest.TestCase):
             key_dict["scheme"] = "invalid_scheme"
             signer = SSlibSigner(key_dict)
             with self.assertRaises((FormatError, UnsupportedAlgorithmError)):
-                envelope_obj.sign(signer)
+                envelope_obj.create_sig(signer)
 
             # Sign the payload.
             key_dict["scheme"] = valid_scheme
             signer = SSlibSigner(key_dict)
-            envelope_obj.sign(signer)
+            envelope_obj.create_sig(signer)
 
             # Create a List of "Key" from key_dict.
             key_list.append(SSlibKey.from_securesystemslib_key(key_dict))
@@ -135,14 +135,14 @@ class TestEnvelope(unittest.TestCase):
         # Test for invalid threshold value for keys_list.
         # threshold is 0.
         with self.assertRaises(ValueError):
-            envelope_obj.verify(key_list, 0)
+            envelope_obj.verify_sigs(key_list, 0)
 
         # threshold is greater than no of keys.
         with self.assertRaises(ValueError):
-            envelope_obj.verify(key_list, 4)
+            envelope_obj.verify_sigs(key_list, 4)
 
         # Test with valid keylist and threshold.
-        verified_keys = envelope_obj.verify(key_list, len(key_list))
+        verified_keys = envelope_obj.verify_sigs(key_list, len(key_list))
         self.assertEqual(len(verified_keys), len(key_list))
 
         # Test for unknown keys and threshold of 1.
@@ -156,15 +156,15 @@ class TestEnvelope(unittest.TestCase):
             new_key_list.append(SSlibKey.from_securesystemslib_key(key_dict))
 
         with self.assertRaises(SignatureVerificationError):
-            envelope_obj.verify(new_key_list, 1)
+            envelope_obj.verify_sigs(new_key_list, 1)
 
         all_keys = key_list + new_key_list
-        envelope_obj.verify(all_keys, 3)
+        envelope_obj.verify_sigs(all_keys, 3)
 
         # Test with duplicate keys.
         duplicate_keys = key_list + key_list
         with self.assertRaises(SignatureVerificationError):
-            envelope_obj.verify(duplicate_keys, 4)  # 3 unique keys, threshold 4.
+            envelope_obj.verify_sigs(duplicate_keys, 4)  # 3 unique keys, threshold 4.
 
 # Run the unit tests.
 if __name__ == "__main__":

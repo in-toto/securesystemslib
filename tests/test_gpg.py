@@ -667,18 +667,18 @@ class TestGPGRSA(unittest.TestCase):
 
     # Create a GPGSigner and create a DSSE signature.
     gpg_signer = GPGSigner(homedir=self.gnupg_home)
-    gpg_signature = envelope.sign(gpg_signer)
+    gpg_signature = envelope.create_sig(gpg_signer)
     self.assertIsInstance(gpg_signature, GPGSignature)
     
     # Create a GPGKey and verify the DSSE signature.
     gpgkey = GPGKey.from_keyring(keyid=self.default_keyid, homedir=self.gnupg_home)
     key_list: List[Key] = [gpgkey]
-    envelope.verify(key_list, 1)
+    envelope.verify_sigs(key_list, 1)
 
     # Duplicate GPGKey.
     new_key_list = key_list + key_list
     with self.assertRaises(SignatureVerificationError):
-      envelope.verify(new_key_list, 2)
+      envelope.verify_sigs(new_key_list, 2)
 
 
 @unittest.skipIf(not HAVE_GPG, "gpg not found")
@@ -776,13 +776,13 @@ class TestGPGDSA(unittest.TestCase):
 
     # Create a GPGSigner and create a DSSE signature.
     gpg_signer = GPGSigner(homedir=self.gnupg_home)
-    gpg_signature = envelope.sign(gpg_signer)
+    gpg_signature = envelope.create_sig(gpg_signer)
     self.assertIsInstance(gpg_signature, GPGSignature)
     
     # Create a GPGKey and verify the DSSE signature.
     gpgkey = GPGKey.from_keyring(keyid=self.default_keyid, homedir=self.gnupg_home)
     key_list: List[Key] = [gpgkey]
-    envelope.verify(key_list, 1)
+    envelope.verify_sigs(key_list, 1)
 
 
 
@@ -871,13 +871,13 @@ class TestGPGEdDSA(unittest.TestCase):
 
     # Create a GPGSigner and create a DSSE signature.
     gpg_signer = GPGSigner(homedir=self.gnupg_home)
-    gpg_signature = envelope.sign(gpg_signer)
+    gpg_signature = envelope.create_sig(gpg_signer)
     self.assertIsInstance(gpg_signature, GPGSignature)
     
     # Create a GPGKey and verify the DSSE signature.
     gpgkey = GPGKey.from_keyring(keyid=self.default_keyid, homedir=self.gnupg_home)
     key_list: List[Key] = [gpgkey]
-    envelope.verify(key_list, 1)
+    envelope.verify_sigs(key_list, 1)
 
 
 if __name__ == "__main__":
