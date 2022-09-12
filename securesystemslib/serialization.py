@@ -79,7 +79,7 @@ class JSONSerializer(BaseSerializer):
         """Serialize an object into utf-8 encoded JSON bytes.
 
         Arguments:
-            obj: An instance of "JSONSerializable" subclass.
+            obj: An instance of ``JSONSerializable`` subclass.
 
         Returns:
             UTF-8 encoded JSON bytes of the object.
@@ -107,14 +107,14 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def default_deserializer() -> BaseDeserializer:
+    def _default_deserializer() -> BaseDeserializer:
         """Default Deserializer to be used for deserialization"""
 
         raise NotImplementedError  # pragma: no cover
 
     @staticmethod
     @abc.abstractmethod
-    def default_serializer() -> BaseSerializer:
+    def _default_serializer() -> BaseSerializer:
         """Default Serializer to be used for serialization."""
 
         raise NotImplementedError  # pragma: no cover
@@ -125,20 +125,19 @@ class SerializationMixin(metaclass=abc.ABCMeta):
         data: bytes,
         deserializer: Optional[BaseDeserializer] = None,
     ) -> Any:
-        """Loads the Serializable from raw data.
+        """Loads the object from raw data.
 
         Arguments:
             data: bytes content.
             deserializer: ``BaseDeserializer`` implementation to use.
-                Default is JSONDeserializer.
         Raises:
             DeserializationError: The file cannot be deserialized.
         Returns:
-            The Serializable object.
+            Deserialized object.
         """
 
         if deserializer is None:
-            deserializer = cls.default_deserializer()
+            deserializer = cls._default_deserializer()
 
         return deserializer.deserialize(data)
 
@@ -162,7 +161,7 @@ class SerializationMixin(metaclass=abc.ABCMeta):
             StorageError: The file cannot be read.
             DeserializationError: The file cannot be deserialized.
         Returns:
-            The Serializable object.
+            Deserialized object.
         """
 
         if storage_backend is None:
@@ -183,13 +182,13 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
         Arguments:
             serializer: ``BaseSerializer`` instance that implements the
-                desired serialization format. Default is ``JSONSerializer``.
+                desired serialization format.
         Raises:
-            SerializationError: The Serializable object cannot be serialized.
+            SerializationError: If object cannot be serialized.
         """
 
         if serializer is None:
-            serializer = self.default_serializer()
+            serializer = self._default_serializer()
 
         return serializer.serialize(self)
 
@@ -215,7 +214,7 @@ class SerializationMixin(metaclass=abc.ABCMeta):
             storage_backend: ``StorageBackendInterface`` implementation.
                 Default  is ``FilesystemBackend`` (i.e. a local file).
         Raises:
-            SerializationError: The Serializable object cannot be serialized.
+            SerializationError: If object cannot be serialized.
             StorageError: The file cannot be written.
         """
 

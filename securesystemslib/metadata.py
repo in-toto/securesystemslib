@@ -70,11 +70,11 @@ class Envelope(SerializationMixin, JSONSerializable):
         )
 
     @staticmethod
-    def default_deserializer() -> BaseDeserializer:
+    def _default_deserializer() -> BaseDeserializer:
         return EnvelopeJSONDeserializer()
 
     @staticmethod
-    def default_serializer() -> BaseSerializer:
+    def _default_serializer() -> BaseSerializer:
         return JSONSerializer()
 
     @classmethod
