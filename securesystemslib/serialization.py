@@ -37,7 +37,8 @@ class JSONDeserializer(BaseDeserializer):
             raw_data: A utf-8 encoded bytes string.
 
         Raises:
-            DeserializationError: If fails to decode raw_data into json.
+            securesystemslib.exceptions.DeserializationError: If fails to
+                decode raw_data into json.
 
         Returns:
             dict.
@@ -79,7 +80,12 @@ class JSONSerializer(BaseSerializer):
         """Serialize an object into utf-8 encoded JSON bytes.
 
         Arguments:
-            obj: An instance of ``JSONSerializable`` subclass.
+            obj: An instance of
+                ``securesystemslib.serialization.JSONSerializable`` subclass.
+
+        Raises:
+            securesystemslib.exceptions.SerializationError: If fails to encode
+                into json bytes.
 
         Returns:
             UTF-8 encoded JSON bytes of the object.
@@ -100,7 +106,7 @@ class JSONSerializer(BaseSerializer):
 
 
 class SerializationMixin(metaclass=abc.ABCMeta):
-    """Instance of class with SerializationMixin are to be serialized and
+    """Instance of class with ``SerializationMixin`` are to be serialized and
     deserialized using `to_bytes`, `from_bytes`, `to_file` and `from_file`
     methods.
     """
@@ -108,7 +114,7 @@ class SerializationMixin(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def _default_deserializer() -> BaseDeserializer:
-        """Default Deserializer to be used for deserialization"""
+        """Default Deserializer to be used for deserialization."""
 
         raise NotImplementedError  # pragma: no cover
 
@@ -129,9 +135,11 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
         Arguments:
             data: bytes content.
-            deserializer: ``BaseDeserializer`` implementation to use.
+            deserializer: ``securesystemslib.serialization.BaseDeserializer``
+                implementation to use.
         Raises:
-            DeserializationError: The file cannot be deserialized.
+            securesystemslib.exceptions.DeserializationError: The file cannot
+                be deserialized.
         Returns:
             Deserialized object.
         """
@@ -152,14 +160,17 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
         Arguments:
             filename: Path to read the file from.
-            deserializer: ``BaseDeserializer`` subclass instance that
-                implements the desired wireline format deserialization.
+            deserializer: ``securesystemslib.serialization.BaseDeserializer``
+                subclass instance that implements the desired wireline
+                format deserialization.
             storage_backend: Object that implements
                 ``securesystemslib.storage.StorageBackendInterface``.
-                Default is ``FilesystemBackend`` (i.e. a local file).
+                Default is ``securesystemslib.storage.FilesystemBackend``
+                (i.e. a local file).
         Raises:
-            StorageError: The file cannot be read.
-            DeserializationError: The file cannot be deserialized.
+            securesystemslib.exceptions.StorageError: The file cannot be read.
+            securesystemslib.exceptions.DeserializationError: The file cannot
+                be deserialized.
         Returns:
             Deserialized object.
         """
@@ -181,10 +192,11 @@ class SerializationMixin(metaclass=abc.ABCMeta):
         instead of re-serializing.
 
         Arguments:
-            serializer: ``BaseSerializer`` instance that implements the
-                desired serialization format.
+            serializer: ``securesystemslib.serialization.BaseSerializer``
+                instance that implements the desired serialization format.
         Raises:
-            SerializationError: If object cannot be serialized.
+            securesystemslib.exceptions.SerializationError: If object cannot be
+                serialized.
         """
 
         if serializer is None:
@@ -209,13 +221,17 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
         Arguments:
             filename: Path to write the file to.
-            serializer: ``BaseSerializer`` instance that implements the
-                desired serialization format. Default is ``JSONSerializer``.
-            storage_backend: ``StorageBackendInterface`` implementation.
-                Default  is ``FilesystemBackend`` (i.e. a local file).
+            serializer: ``securesystemslib.serialization.BaseSerializer``
+                instance that implements the desired serialization format.
+            storage_backend: Object that implements
+                ``securesystemslib.storage.StorageBackendInterface``.
+                Default  is ``securesystemslib.storage.FilesystemBackend``
+                (i.e. a local file).
         Raises:
-            SerializationError: If object cannot be serialized.
-            StorageError: The file cannot be written.
+            securesystemslib.exceptions.SerializationError: If object cannot
+                be serialized.
+            securesystemslib.exceptions.StorageError: The file cannot be
+                written.
         """
 
         bytes_data = self.to_bytes(serializer)
@@ -226,8 +242,8 @@ class SerializationMixin(metaclass=abc.ABCMeta):
 
 
 class JSONSerializable(metaclass=abc.ABCMeta):
-    """Objects serialized with ``JSONSerializer`` must inherit from this class
-    and implement its ``to_dict`` method.
+    """Objects serialized with ``securesystemslib.serialization.JSONSerializer``
+    must inherit from this class and implement its ``to_dict`` method.
     """
 
     @abc.abstractmethod
